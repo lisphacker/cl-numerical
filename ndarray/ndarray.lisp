@@ -61,6 +61,7 @@
                                                              :size  (length strides)
                                                              :initial-contents strides)))))
     (make-instance 'ndarray
+                   :num-axes (size shape-vec)
                    :shape shape-vec
                    :strides strides-vec
                    :buffer (if buffer
@@ -71,9 +72,6 @@
                                                 :size  size
                                                 :initial-contents initial-contents)))
                    :offset offset)))
-
-#|
-(defgeneric ndaref (array &rest indices))
 
 (defun type-check-indices (indices)
   "Ensure that indices is a list of either integers or lists containing two integers"
@@ -86,50 +84,42 @@
 
 (defmethod squeeze ((array ndarray))
   "Squeeze out axis of size 1"
-  (if (some (lambda (x) (= x 1)) (shape array))
-      (let ((shape-list nil)
-            (strides-list nil))
-        (loop for i from (1- (num-axes array)) downto 0 do
-             (if (/= (aref (shape array) i) 1)
-                 (setf shape-list    (cons (aref (shape array) i) shape-list)
-                       strides-list (cons (aref (strides array) i) strides-list))))
-        (create-ndarray shape-list
-                        :strides strides-list
-                        :offset (offset array)
-                        :buffer (buffer array)))))
-    
+  (let ((num-axes (num-axes array)))
+    (let ((shape (make-c-vector-from-list (loop for i from 0 below num-axes
+                                             when (/= (vref (shape array) i) 1)
+                                             collecting (vref (shape array) i))))
+          (strides (make-c-vector-from-list (loop for i from 0 below num-axes
+                                               when (/= (vref (shape array) i) 1)
+                                               collecting (vref (strides array) i)))))
+      (make-ndarray shape
+                    :strides strides
+                    :offset (offset array)
+                    :buffer (buffer array)))))
+
 (defmethod slice ((array ndarray) slice-offsets)
   "Get a slince out of an ndarray"
   (if (not (type-check-indices slice-offsets))
       (error "Invalid index format - ~a" slice-offsets))
-  (let* ((shape-list (mapcar (lambda (x) (abs (- (second x) (first x)))) slice-offsets))
-         (shape-vec (make-array (num-axes array) :element-type 'fixnum :initial-contents shape-list))
-         (strides-vec (make-array (num-axes array) :element-type 'fixnum :initial-contents (strides array))))
-    (squeeze (create-ndarray shape-vec
-                             :strides strides-vec
-                             :offset  (+ (offset array) (loop for slice-offset in slice-offsets
-                                                           for stride across (strides array)
-                                                           summing (* (car slice-offset) stride)))
-                             :buffer  (buffer array)))))
-
-
-(defparameter *MAX-VALS-PRINTED-PER-ROW* 10)
-(defparameter *MAX-ROWS-PRINTED*         10)
+  (let* ((shape (mapcar (lambda (x) (abs (- (second x) (first x)))) slice-offsets)))
+    (squeeze (make-ndarray shape
+                           :strides (strides array)
+                           :offset  (+ (offset array) (loop for slice-offset in (reverse slice-offsets)
+                                                         for i from 0
+                                                         summing (* (car slice-offset) (vref (strides array) i))))
+                           :buffer  (buffer array)))))
 
 (defmethod print-1d ((array ndarray) stream)
   "Print out the values in a 1D ndarray"
-  (let ((len (size array))
-        (stride (aref (strides array) 0)))
+  (let ((len (size array)))
     (loop for i from 0 below len
        while (< i *MAX-VALS-PRINTED-PER-ROW*)
        initially (format stream "[")
-       do (format stream "~a~6f" (if (zerop i) "" ", ") (aref (data (buffer array)) (+ (offset array)
-                                                                                       (* i stride))))
+       do (format stream "~a~6f" (if (zerop i) "" ", ") (ndaref array i))
        finally (format stream "~a]" (if (> len *MAX-VALS-PRINTED-PER-ROW*) " ... " "")))))
       
 (defmethod print-2d ((array ndarray) stream)
   "Print out the values in a 2D ndarray"
-  (let ((rows (aref (shape array) 0)))
+  (let ((rows (vref (shape array) 1)))
     (loop for i from 0 below rows while (< i *MAX-ROWS-PRINTED*)
        do
          (format stream "~a" (if (zerop i) "[" " "))
@@ -153,4 +143,3 @@
     ((= (num-axes array) 1) (print-1d array stream))
     ((= (num-axes array) 2) (print-2d array stream))
     (t                      (print-nd array stream))))
-|#

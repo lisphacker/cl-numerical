@@ -37,17 +37,16 @@
                
 (defmethod reshape ((array ndarray) shape)
   "Reshape the ndarray into a new shape"
-  (if (/= (size array) (shape-to-size shape))
-      (error "Size of specified shape does not match that of the array"))
-  (let* ((shape-vec (make-array (length shape)
-                                :element-type 'fixnum
-                                :initial-contents shape))
-         (strides (shape-to-strides shape))
-         (strides-vec (make-array (length strides)
-                                  :element-type 'fixnum
-                                  :initial-contents strides)))
-    (make-instance 'ndarray
-                   :shape shape-vec
-                   :strides strides-vec
-                   :offset (offset array)
-                   :buffer (buffer array))))
+  (let ((shape-vec (if (c-vector-p shape) shape
+                       (make-c-vector :size (length shape)
+                                      :ctype :int
+                                      :initial-contents (reverse shape)))))
+    (if (/= (size array) (shape-to-size shape-vec))
+        (error "Size of specified shape does not match that of the array"))
+    (let* ((strides-vec (shape-to-strides shape-vec)))
+      (make-instance 'ndarray
+                     :num-axes (size shape-vec)
+                     :shape    shape-vec
+                     :strides  strides-vec
+                     :offset   (offset array)
+                     :buffer   (buffer array)))))

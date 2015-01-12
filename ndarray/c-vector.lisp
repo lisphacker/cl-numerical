@@ -11,10 +11,17 @@
   (:documentation "1D C vector"))
 
 (defun make-c-vector (&key (ctype :int) size (initial-contents nil))
-  (make-instance 'c-vector
-                 :ctype ctype
-                 :size size
-                 :initial-contents initial-contents))
+  (let ((c-vector (make-instance 'c-vector
+                                 :ctype ctype
+                                 :size size
+                                 :initial-contents initial-contents)))
+    ;; Setup cleanup code
+    #+sbcl (sb-ext:finalize c-vector (lambda () (cffi:foreign-free (data c-vector))))))
+
+(defun make-c-vector-from-list (list &key (ctype :int))
+  (make-c-vector :ctype ctype
+                 :size (length list)
+                 :initial-contents list))
 
 (defmethod vref ((vector c-vector) index)
   (mref vector index))

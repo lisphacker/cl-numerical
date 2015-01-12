@@ -19,11 +19,17 @@
   :description "N-Dimensional array"
   :depends-on (:cl-numerical.basic :cffi)
   :components ((:module "ndarray"
-                        :components ((:file "buffer")
+                        :components (
+                                     (:file "buffer")
                                      (:file "constants")
+                                     (:file "cffi-util")
                                      (:file "c-vector" :depends-on ("buffer" "constants"))
                                      (:file "ndarray" :depends-on ("buffer" "c-vector" "constants"))
-                                     (:file "shape" :depends-on ("c-vector" "ndarray"))))))
+                                     (:file "shape" :depends-on ("c-vector" "ndarray"))
+                                     (:file "ndaref" :depends-on ("ndarray"))
+                                     (:file "create" :depends-on ("ndarray" "ndaref" "cffi-util"))
+                                     
+                                     ))))
 
 ;;; Main system
 (asdf:defsystem :cl-numerical

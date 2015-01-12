@@ -31,6 +31,10 @@
         (if (listp initial-contents)
             (cffi:foreign-alloc ctype :count size :initial-contents initial-contents)
             (cffi:foreign-alloc ctype :count size :initial-element initial-contents)))
+
+  ;; Setup cleanup code
+  #+sbcl (sb-ext:finalize buffer (lambda () (cffi:foreign-free (data buffer))))
+  
   buffer)
 
 (defmethod mref ((buffer buffer) index)
