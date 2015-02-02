@@ -13,4 +13,3 @@
 
 (defun coerce-to-cffi-type (val &key (ctype *DEFAULT-CTYPE*))
   (coerce val (ctype-to-lisp-type ctype)))
-

@@ -43,23 +43,34 @@
 (defmethod same-type-p ((a ndarray) (b ndarray))
   (equal (ctype (buffer a)) (ctype (buffer b))))
 
-(defun make-ndarray (shape &key (ctype :float) (strides nil) (initial-contents nil) (buffer nil) (offset 0))
+(defun make-ndarray (shape
+                     &key
+                       (memtype *DEFAULT-MEMTYPE*)
+                       (ctype *DEFAULT-CTYPE*)
+                       (strides nil)
+                       (initial-contents nil)
+                       (buffer nil)
+                       (offset 0))
   "Create an ndarray object"
+  (assert (member memtype '(:lisp :c)))
   (let* ((shape-vec (cond
-                      ((c-vector-p shape) shape)
-                      ((listp shape)      (make-c-vector :ctype :int
-                                                         :size (length shape)
-                                                         :initial-contents (reverse shape)))
-                      ((integerp shape)   (make-c-vector :ctype :int
-                                                         :size 1
-                                                         :initial-contents shape))
+                      ((vectorp shape) shape)
+                      ((listp shape)      (make-vector :memtype memtype
+                                                       :ctype :int
+                                                       :size (length shape)
+                                                       :initial-contents (reverse shape)))
+                      ((integerp shape)   (make-vector :memtype memtype
+                                                       :ctype :int
+                                                       :size 1
+                                                       :initial-contents shape))
                       (t                  (error "Invalid value for shape"))))
          (strides-vec (cond
                         ((null strides)       (shape-to-strides shape-vec))
-                        ((c-vector-p strides) strides)
-                        ((listp      strides) (make-c-vector :ctype :int
-                                                             :size  (length strides)
-                                                             :initial-contents strides)))))
+                        ((vectorp strides)    strides)
+                        ((listp      strides) (make-vector :memtype memtype
+                                                           :ctype :int
+                                                           :size  (length strides)
+                                                           :initial-contents strides)))))
     (make-instance 'ndarray
                    :num-axes (size shape-vec)
                    :shape shape-vec
@@ -67,10 +78,15 @@
                    :buffer (if buffer
                                buffer
                                (let ((size (shape-to-size shape-vec)))
-                                 (make-instance 'buffer
-                                                :ctype ctype
-                                                :size  size
-                                                :initial-contents initial-contents)))
+                                 (cond
+                                   ((equal memtype :lisp) (make-instance 'lisp-buffer
+                                                                         :ctype ctype
+                                                                         :size  size
+                                                                         :initial-contents initial-contents))
+                                   ((equal memtype :c) (make-instance 'c-buffer
+                                                                      :ctype ctype
+                                                                      :size  size
+                                                                      :initial-contents initial-contents)))))
                    :offset offset)))
 
 (defun type-check-indices (indices)
@@ -85,12 +101,12 @@
 (defmethod squeeze ((array ndarray))
   "Squeeze out axis of size 1"
   (let ((num-axes (num-axes array)))
-    (let ((shape (make-c-vector-from-list (loop for i from 0 below num-axes
+    (let ((shape (make-vector-from-list (loop for i from 0 below num-axes
+                                           when (/= (vref (shape array) i) 1)
+                                           collecting (vref (shape array) i))))
+          (strides (make-vector-from-list (loop for i from 0 below num-axes
                                              when (/= (vref (shape array) i) 1)
-                                             collecting (vref (shape array) i))))
-          (strides (make-c-vector-from-list (loop for i from 0 below num-axes
-                                               when (/= (vref (shape array) i) 1)
-                                               collecting (vref (strides array) i)))))
+                                             collecting (vref (strides array) i)))))
       (make-ndarray shape
                     :strides strides
                     :offset (offset array)

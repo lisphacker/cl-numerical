@@ -10,3 +10,4 @@
 (defparameter *MAX-ROWS-PRINTED*         10)
 
 (defparameter *DEFAULT-CTYPE* :float)
+(defparameter *DEFAULT-MEMTYPE* :lisp)

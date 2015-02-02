@@ -36,4 +36,5 @@
          (array (empty num :ctype ctype)))
     (loop for val from start2 to stop2 by step
        for idx from 0 do
-         (setf (mref (buffer array) idx) (coerce-to-cffi-type val :ctype ctype)))))
+         (setf (mref (buffer array) idx) (coerce-to-cffi-type val :ctype ctype)))
+    array))

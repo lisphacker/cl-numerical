@@ -15,7 +15,7 @@
 
 (defun shape-to-strides (shape)
   "Compute the axes strides for an ndarray with the given shape in contiguous memory"
-  (let ((strides (make-c-vector :ctype :int :size (size shape)))
+  (let ((strides (make-vector :memtype (memtype shape) :ctype :int :size (size shape)))
         (prod 1))
     (loop for i from 0 below (size shape) do
          (setf (vref strides i) prod)
@@ -35,12 +35,13 @@
                (setf same (and same (= (vref shape1 i1) (vref shape2 i2)))))
           same))))
                
-(defmethod reshape ((array ndarray) shape)
+(defmethod reshape ((array ndarray) shape &key (memtype *DEFAULT-MEMTYPE*))
   "Reshape the ndarray into a new shape"
-  (let ((shape-vec (if (c-vector-p shape) shape
-                       (make-c-vector :size (length shape)
-                                      :ctype :int
-                                      :initial-contents (reverse shape)))))
+  (let ((shape-vec (if (vectorp shape) shape
+                       (make-vector :memtype memtype
+                                    :size (length shape)
+                                    :ctype :int
+                                    :initial-contents (reverse shape)))))
     (if (/= (size array) (shape-to-size shape-vec))
         (error "Size of specified shape does not match that of the array"))
     (let* ((strides-vec (shape-to-strides shape-vec)))

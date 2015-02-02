@@ -20,14 +20,18 @@
   :depends-on (:cl-numerical.basic :cffi)
   :components ((:module "ndarray"
                         :components (
-                                     (:file "buffer")
                                      (:file "constants")
-                                     (:file "cffi-util")
-                                     (:file "c-vector" :depends-on ("buffer" "constants"))
-                                     (:file "ndarray" :depends-on ("buffer" "c-vector" "constants"))
-                                     (:file "shape" :depends-on ("c-vector" "ndarray"))
+                                     (:file "cffi-util" :depends-on ("constants"))
+                                     (:file "buffer")
+                                     (:file "lisp-buffer" :depends-on ("buffer" "cffi-util"))
+                                     (:file "c-buffer" :depends-on ("buffer"))
+                                     
+                                     (:file "vector" :depends-on ("buffer" "constants"))
+                                     (:file "ndarray" :depends-on ("buffer" "vector" "constants"))
+                                     (:file "shape" :depends-on ("vector" "ndarray" "constants"))
                                      (:file "ndaref" :depends-on ("ndarray"))
                                      (:file "create" :depends-on ("ndarray" "ndaref" "cffi-util"))
+
                                      
                                      ))))
 

@@ -11,6 +11,7 @@
 
 (defpackage :cl-numerical.ndarray
   (:documentation "N-Dimensional array")
+  (:shadow :vector :vectorp)
   (:use :common-lisp))
 
 (defpackage :cl-numerical
